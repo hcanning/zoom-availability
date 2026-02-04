@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>HCANN | Availability Finder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif; background-color: #f5f5f5; color: #333; line-height: 1.4; padding: .5rem; margin: 0; }
+    .container { max-width: 1400px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.1); overflow: hidden; }
+    header { background: #c00; color: #fff; padding: .75rem 1rem; text-align: center; }
+    header h1 { font-size: 1.2rem; margin-bottom: 0; }
+    .subtitle { font-size: .8rem; opacity: .9; margin-top: .1rem; }
+    main { padding: 1rem; }
+    .controls { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; justify-content: center; }
+    .instruction { font-size: .9rem; color: #fff; background: #28a745; padding: .5rem 1rem; border-radius: 20px; margin-bottom: 1rem; display: inline-block; font-weight: 500; }
+    .btn { padding: .5rem 1rem; border-radius: 6px; font-size: .9rem; cursor: pointer; transition: all .2s; font-weight: 500; border: 2px solid transparent; }
+    .btn-primary { background: #fff; color: #cc0000; border: 2px solid #cc0000; min-width: 120px; }
+    .btn-primary:hover { background: #f9f9f9; color: #a30000; border-color: #a30000; }
+    .btn-secondary { background: #fff; color: #cc0000; border: 2px solid #cc0000; min-width: 120px; }
+    .btn-secondary:hover { background: #f9f9f9; color: #a30000; border-color: #a30000; }
+    .btn-action { background: #fff; color: #cc0000; border: 2px solid #cc0000; width: auto; min-width: 120px; font-size: 1rem; padding: .75rem 2rem; }
+    .btn-action:hover { background: #f9f9f9; color: #a30000; border-color: #a30000; }
+    .btn-remove { background: #fff; color: #cc0000; border: 2px solid #cc0000; padding: .4rem .6rem; font-size: 1.1rem; min-width: 32px; flex-shrink: 0; }
+    .btn-remove:hover { background: #f9f9f9; color: #a30000; border-color: #a30000; }
+    .attendee-list { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
+    .attendee-card { border: 2px solid #e0e0e0; border-radius: 6px; padding: .4rem; background: #fafafa; }
+    .demo-row { background: #f0f0f0; border-color: #ccc; opacity: .7; }
+    .demo-row input { background: #e8e8e8; color: #666; cursor: not-allowed; }
+    .demo-row .btn-remove { opacity: .5; cursor: not-allowed; }
+    .demo-row .attendee-number { color: #888; }
+    .attendee-row { display: flex; align-items: center; gap: .4rem; flex-wrap: nowrap; }
+    .attendee-number { font-weight: 700; color: #c00; font-size: .8rem; min-width: 28px; text-align: center; }
+    .attendee-row input { padding: .4rem; border: 1px solid #ddd; border-radius: 4px; font-size: .85rem; transition: border-color .2s; }
+    .attendee-row input:focus { outline: 0; border-color: #c00; }
+    .attendee-row input:invalid { border-color: #ff4444; }
+    .input-name { flex: .5; min-width: 45px; }
+    .input-date { flex: .4; min-width: 35px; }
+    .input-time { flex: 1; min-width: 70px; }
+    .action-section { margin: 1rem 0; }
+    .results { margin-top: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px; border: 2px solid #c00; }
+    .results.hidden { display: none; }
+    .results h2 { color: #c00; margin-bottom: .75rem; font-size: 1.1rem; }
+    .result-item { background: #fff; padding: .6rem; margin-bottom: .5rem; border-radius: 6px; border-left: 4px solid #c00; display: flex; justify-content: space-between; align-items: center; }
+    .result-time { font-weight: 700; color: #333; font-size: .95rem; }
+    .result-count { background: #c00; color: #fff; padding: .2rem .6rem; border-radius: 20px; font-size: .8rem; }
+    .result-attendees { color: #666; font-size: .8rem; margin-top: .3rem; }
+    .empty-state { text-align: center; padding: 2rem 1rem; color: #999; }
+    .empty-state p { font-size: 1rem; margin-bottom: .3rem; }
+    @media (min-width:768px) {
+      body { padding: 1rem; }
+      header h1 { font-size: 1.4rem; }
+      .subtitle { font-size: .85rem; }
+      main { padding: 1.25rem; }
+      .attendee-card { padding: .5rem; }
+      .attendee-row input { padding: .5rem; font-size: .9rem; }
+      .input-name { flex: 2; }
+      .input-date { flex: 1; }
+      .input-time { flex: 1.2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>HCANN | Availability Finder</h1>
+      <p class="subtitle">Find the perfect meeting time</p>
+    </header>
+    <main>
+      <p class="instruction">Instruction: Add top 3 times for each attendee</p>
+      <div id="attendeeList" class="attendee-list"></div>
+      <div class="controls">
+        <button id="addAttendeeBtn2" class="btn btn-primary">+ Add Attendee</button>
+        <button id="clearAllBtn" class="btn btn-secondary">Reset</button>
+      </div>
+      <div class="action-section">
+        <button id="findTimeBtn" class="btn btn-action">Find Available Times</button>
+      </div>
+      <div id="results" class="results hidden">
+        <h2>Top Available Times</h2>
+        <div id="resultsList"></div>
+      </div>
+    </main>
+  </div>
+  <script>
+    let attendees = [];
+    let attendeeCounter = 0;
+    const attendeeList = document.getElementById("attendeeList");
+    const addAttendeeBtn2 = document.getElementById("addAttendeeBtn2");
+    const clearAllBtn = document.getElementById("clearAllBtn");
+    const findTimeBtn = document.getElementById("findTimeBtn");
+    const resultsDiv = document.getElementById("results");
+    const resultsList = document.getElementById("resultsList");
+
+    function init() {
+      loadFromLocalStorage();
+      renderAttendees();
+      attachEventListeners();
+    }
+
+    function attachEventListeners() {
+      addAttendeeBtn2.addEventListener("click", addAttendee);
+      clearAllBtn.addEventListener("click", clearAll);
+      findTimeBtn.addEventListener("click", findAvailableTimes);
+    }
+
+    function addAttendee() {
+      attendeeCounter++;
+      const attendee = {
+        id: Date.now(),
+        number: attendeeCounter,
+        name: "",
+        date1: "",
+        time1: "",
+        date2: "",
+        time2: "",
+        date3: "",
+        time3: ""
+      };
+      attendees.push(attendee);
+      renderAttendees();
+      saveToLocalStorage();
+    }
+
+    function removeAttendee(id) {
+      attendees = attendees.filter(a => a.id !== id);
+      renderAttendees();
+      saveToLocalStorage();
+    }
+
+    function clearAll() {
+      if (confirm("Are you sure you want to clear all attendees?")) {
+        attendees = [];
+        attendeeCounter = 0;
+        renderAttendees();
+        saveToLocalStorage();
+        hideResults();
+      }
+    }
+
+    function renderAttendees() {
+      let html = `
+        <div class="attendee-card demo-row">
+          <div class="attendee-row">
+            <span class="attendee-number">EX</span>
+            <input type="text" class="input-name" value="Name" disabled>
+            <input type="text" class="input-date" value="m/d - 2/5" disabled>
+            <input type="text" class="input-time" value="e.g. 11:30AM" disabled>
+            <input type="text" class="input-date" value="m/d - 2/5" disabled>
+            <input type="text" class="input-time" value="e.g. 11:30AM" disabled>
+            <input type="text" class="input-date" value="m/d - 2/5" disabled>
+            <input type="text" class="input-time" value="e.g. 11:30AM" disabled>
+            <button class="btn btn-remove" disabled>×</button>
+          </div>
+        </div>
+      `;
+      if (attendees.length === 0) {
+        html += `
+          <div class="empty-state">
+            <p>No attendees added yet</p>
+            <small>Click "Add Attendee" to get started</small>
+          </div>
+        `;
+        attendeeList.innerHTML = html;
+        return;
+      }
+      html += attendees.map(attendee => `
+        <div class="attendee-card" data-id="${attendee.id}">
+          <div class="attendee-row">
+            <span class="attendee-number">#${attendee.number}</span>
+            <input type="text" class="input-name" placeholder="" value="${attendee.name}" onchange="updateAttendee(${attendee.id}, 'name', this.value)">
+            <input type="text" class="input-date" placeholder="" value="${attendee.date1}" onchange="updateAttendee(${attendee.id}, 'date1', this.value)">
+            <input type="text" class="input-time" placeholder="" value="${attendee.time1}" onchange="updateAttendee(${attendee.id}, 'time1', this.value)">
+            <input type="text" class="input-date" placeholder="" value="${attendee.date2}" onchange="updateAttendee(${attendee.id}, 'date2', this.value)">
+            <input type="text" class="input-time" placeholder="" value="${attendee.time2}" onchange="updateAttendee(${attendee.id}, 'time2', this.value)">
+            <input type="text" class="input-date" placeholder="" value="${attendee.date3}" onchange="updateAttendee(${attendee.id}, 'date3', this.value)">
+            <input type="text" class="input-time" placeholder="" value="${attendee.time3}" onchange="updateAttendee(${attendee.id}, 'time3', this.value)">
+            <button class="btn btn-remove" onclick="removeAttendee(${attendee.id})">×</button>
+          </div>
+        </div>
+      `).join('');
+      attendeeList.innerHTML = html;
+    }
+
+    function updateAttendee(id, field, value) {
+      const attendee = attendees.find(a => a.id === id);
+      if (attendee) {
+        if (field.startsWith('date')) {
+          if (value !== '' && (value.length < 3 || value.length > 5)) {
+            alert('Date must be 3-5 characters (e.g., 2/5) or empty');
+            renderAttendees();
+            return;
+          }
+          if (value !== '' && !/[0-9]/.test(value)) {
+            alert('Date must contain a number (e.g., 2/5)');
+            renderAttendees();
+            return;
+          }
+        } else if (field.startsWith('time')) {
+          if (value !== '' && (value.length < 3 || value.length > 7)) {
+            alert('Time must be 3-7 characters (e.g., 2pm, 11:30AM) or empty');
+            renderAttendees();
+            return;
+          }
+          if (value !== '' && !/[0-9]/.test(value)) {
+            alert('Time must contain a number (e.g., 2pm, 11:30AM)');
+            renderAttendees();
+            return;
+          }
+          if (value !== '' && !/(am|pm)$/i.test(value.trim())) {
+            alert('Time must end with AM or PM (e.g., 2pm, 11:30AM)');
+            renderAttendees();
+            return;
+          }
+        }
+        attendee[field] = value;
+        saveToLocalStorage();
+      }
+    }
+
+    function normalizeTime(timeStr) {
+      if (!timeStr) return '';
+      let time = timeStr.trim().toLowerCase().replace(/\s+/g, '');
+      const match = time.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/);
+      if (match) {
+        let hour = parseInt(match[1]);
+        const minutes = match[2] || '00';
+        const period = match[3];
+        return `${hour}:${minutes}${period}`;
+      }
+      return time;
+    }
+
+    function normalizeDate(dateStr) {
+      if (!dateStr) return '';
+      let date = dateStr.trim();
+      const match = date.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+      if (match) {
+        const month = match[1];
+        const day = match[2];
+        return `${month}/${day}`;
+      }
+      return date;
+    }
+
+    function findAvailableTimes() {
+      const timeSlots = {};
+      attendees.forEach(attendee => {
+        if (!attendee.name) return;
+        for (let i = 1; i <= 3; i++) {
+          const date = attendee[`date${i}`];
+          const time = attendee[`time${i}`];
+          if (date && time) {
+            const normalizedDate = normalizeDate(date);
+            const normalizedTime = normalizeTime(time);
+            const key = `${normalizedDate} at ${normalizedTime}`;
+            if (!timeSlots[key]) {
+              timeSlots[key] = { date: normalizedDate, time: normalizedTime, attendees: [] };
+            }
+            timeSlots[key].attendees.push(attendee.name);
+          }
+        }
+      });
+      const sortedSlots = Object.entries(timeSlots)
+        .map(([key, data]) => ({ key: key, date: data.date, time: data.time, count: data.attendees.length, attendees: data.attendees }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+      displayResults(sortedSlots);
+    }
+
+    function displayResults(slots) {
+      if (slots.length === 0) {
+        resultsList.innerHTML = '<p style="text-align: center; color: #999;">No available times found. Make sure to add attendees with their availability.</p>';
+        resultsDiv.classList.remove('hidden');
+        return;
+      }
+      resultsList.innerHTML = slots.map((slot, index) => `
+        <div class="result-item">
+          <div>
+            <div class="result-time">${index + 1}. ${slot.date} at ${slot.time}</div>
+            <div class="result-attendees">${slot.attendees.join(', ')}</div>
+          </div>
+          <div class="result-count">${slot.count} ${slot.count === 1 ? 'person' : 'people'}</div>
+        </div>
+      `).join('');
+      resultsDiv.classList.remove('hidden');
+      const resultsTop = resultsDiv.getBoundingClientRect().top;
+      if (resultsTop > window.innerHeight - 100) {
+        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function hideResults() {
+      resultsDiv.classList.add('hidden');
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem('attendees', JSON.stringify(attendees));
+      localStorage.setItem('attendeeCounter', attendeeCounter);
+    }
+
+    function loadFromLocalStorage() {
+      const savedAttendees = localStorage.getItem('attendees');
+      const savedCounter = localStorage.getItem('attendeeCounter');
+      if (savedAttendees) {
+        attendees = JSON.parse(savedAttendees);
+      }
+      if (savedCounter) {
+        attendeeCounter = parseInt(savedCounter);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
